@@ -1,4 +1,4 @@
-/* mongodb+srv://smartviswa:<password>@cluster0.plqet.mongodb.net/myFirstDatabase?retryWrites=true&w=majority */
+/* mongodb+srv://smartviswa:<password>@cluster0.plqet.mongodb.net/myFirstreq.bodybase?retryWrites=true&w=majority */
 const express = require('express')
 const mongodb = require('mongodb')
 const cors= require('cors')
@@ -49,6 +49,19 @@ app.get('/sate', async (req, res) => {
     const posts = await loadPostsCollection("Satellite/Radar Image")
     res.send(await posts.find({}).toArray())
 })
+app.get('/temple', async (req, res) => {
+    const posts = await loadPostsCollectionForTourism("Temple")
+    res.send(await posts.find({}).toArray())
+})
+app.get('/hill', async (req, res) => {
+    const posts = await loadPostsCollectionForTourism("Hill Station")
+    res.send(await posts.find({}).toArray())
+})
+app.get('/gallery', async (req, res) => {
+    const posts = await loadPostsCollectionForTourism("Gallery")
+    res.send(await posts.find({}).toArray())
+})
+
 //Add post 
 app.post('/', async (req, res) => {
     if (req.body.PostName === "Weather Warning") {
@@ -70,6 +83,55 @@ app.post('/', async (req, res) => {
            createdAt:new Date()
         })
         console.log("Inserted");
+    }
+    else if (req.body.PostName === "Satellite/Radar Image") {
+        const posts = await loadPostsCollection(req.body.PostName)
+        posts.insertOne({
+           ImageSrc: req.body.Image,
+           createdAt:new Date()
+        })
+        console.log("Inserted");
+    }
+        //Tourisms
+        else if (req.body.PostName === "Hill Station" || req.body.PostName === "Temple") {
+        const posts = await loadPostsCollectionForTourism(req.body.PostName)
+        const forGallery= await loadPostsCollectionForTourism("Gallery")
+                 posts.insertOne({
+                    Name:req.body.Name,
+                    SubDescription:req.body.SubDescription,
+                     Description: req.body.Description,
+                    Place: req.body.Place,
+                    Image: req.body.Image,
+                    Time: req.body.Time,
+                    Season: req.body.Season,
+                    LocationMap: req.body.LocationMap,
+                    createdAt:new Date()
+                 })
+        await forGallery.insertOne({
+                    Image: req.body.Image,
+                    createdAt:new Date()
+        })
+
+    }
+        else if (req.body.PostName === "Gallery") {
+            const forGallery= await loadPostsCollectionForTourism("Gallery")
+            await forGallery.insertOne({
+                Image: req.body.Image,
+                createdAt:new Date()
+                })
+            }
+        //
+    else if (req.body.PostName === "Environmental Awarness") {
+        const posts = await loadPostsCollection(req.body.PostName)
+             posts.insertOne({
+                Title: req.body.Title,
+                Description: req.body.Description,
+                 ImageSrc: req.body.ImageSrc,
+                 Likes: req.body.Likes,
+                 Place:req.body.Place,
+                Comments: req.body.Comments,
+                createdAt:new Date()
+             })
     }
     else {
         const posts = await loadPostsCollection(req.body.PostName)
@@ -96,16 +158,43 @@ app.delete('/:id',async(req, res) => {
     await posts.deleteOne({_id:new mongodb.ObjectID( req.params.id)})
     res.status(200).send()
 })
-
+app.delete('/env/:id',async(req, res) => {
+    const posts = await loadPostsCollection("Environmental Awarness")
+    await posts.deleteOne({_id:new mongodb.ObjectID( req.params.id)})
+    res.status(200).send()
+})
+app.delete('/wea/:id',async(req, res) => {
+    const posts = await loadPostsCollection("Weather Warning")
+    await posts.deleteOne({_id:new mongodb.ObjectID( req.params.id)})
+    res.status(200).send()
+    console.log("Weather Warning Deleted")
+})
 //Updates
-app.put('/:id', async(req, res) => {
+app.put('/:id', async (req, res) => {
+     if (req.body.hasOwnProperty("commentsforenv")) {
+        const posts = await loadPostsCollection("Environmental Awarness")
+        await posts.updateOne({ _id: new mongodb.ObjectID(req.params.id) },{ $push: { "Comments": req.body.Comments } },{ upsert: true },
+            function (err, res) {
+            if (err) throw err;
+            console.log("ENV COMMENTS");
+            })  
+    }
     
-    if (req.body.hasOwnProperty("Comments")) {
+    else if (req.body.hasOwnProperty("commentsforforcast")) {
         const posts = await loadPostsCollection("Forcast")
         await posts.updateOne({ _id: new mongodb.ObjectID(req.params.id) },{ $push: { "Comments": req.body.Comments } },{ upsert: true },
             function (err, res) {
             if (err) throw err;
-            console.log("documentupdated");
+            console.log("comments forcast");
+            })  
+    }
+   
+    else if (req.body.hasOwnProperty("from")) {
+        const posts = await loadPostsCollection("Environmental Awarness")
+        await posts.updateOne({ _id: new mongodb.ObjectID(req.params.id) },{ $set: { "Likes": req.body.Likes } },{ upsert: true },
+            function (err, res) {
+            if (err) throw err;
+            console.log("Likes for  ENV");
             })  
     }
     else if (req.body.hasOwnProperty("Likes")) {
@@ -113,7 +202,7 @@ app.put('/:id', async(req, res) => {
         await posts.updateOne({ _id: new mongodb.ObjectID(req.params.id) },{ $set: { "Likes": req.body.Likes } },{ upsert: true },
             function (err, res) {
             if (err) throw err;
-            console.log("documentupdated");
+            console.log("Likes for Forcast");
             })  
     }
     else if (req.body.hasOwnProperty("Rainfall")) {
@@ -121,15 +210,15 @@ app.put('/:id', async(req, res) => {
         await posts.updateOne({ _id: new mongodb.ObjectID(req.params.id) },{ $set: { "Rainfall": req.body.Rainfall } },{ upsert: true },
             function (err, res) {
             if (err) throw err;
-            console.log("documentupdated");
+            console.log("Rainfall updated");
             })  
     }
-    else if (req.body.hasOwnProperty("Data")) {
+    else if (req.body.hasOwnProperty("req.body")) {
         const posts = await loadPostsCollection("Dam")
-        await posts.updateOne({ _id: new mongodb.ObjectID(req.params.id) },{ $set: { "Data": req.body.Data } },{ upsert: true },
+        await posts.updateOne({ _id: new mongodb.ObjectID(req.params.id) },{ $set: { "req.body": req.body.req.body } },{ upsert: true },
             function (err, res) {
             if (err) throw err;
-            console.log("documentupdated");
+            console.log("Dam updated");
             })  
     }
     else {
@@ -146,37 +235,35 @@ app.put('/:id', async(req, res) => {
             { upsert: true },
             function (err, res) {
             if (err) throw err;
-            console.log("documentupdated");
+            console.log("Whats is  this");
             })  
     }
-      
-   
-    console.log(req.body)
-    /*
-    else if(postname === "Forcast"){
-        posts=  await loadPostsCollection("Forcast")
-    }
-    else if(postname === "Weather Warning"){
-        posts= await loadPostsCollection("Weather Warning")
-    }
-    else if(postname === "Rainfall Status"){
-        posts= await loadPostsCollection("Rainfall Status")
-    }
-    else if(postname === "Satellite/Radar Image"){
-        posts= await loadPostsCollection("Satellite/Radar Image")
-    }
-    else {
-        posts= await loadPostsCollection("Satellite/Radar Image")
-    } */
-
-    /* var query ={"_id":req.params.id}
-    var newVal={$set:{"Likes":req.body.Likes }} */
    
     res.status(200).send()
 })
 
 
 //////////////////////////
+async function loadPostsCollectionForTourism(postname) {
+    const client = await mongodb.MongoClient.connect
+        ('mongodb+srv://rajaweather:rajaweather123@cluster0.aivkh.mongodb.net/myFirstreq.bodybase?retryWrites=true&w=majority',
+            {
+            useUnifiedTopology: true
+            }
+    )
+    if (postname === "Temple") {
+        return client.db('Tourism').collection('Temples') 
+    }
+    else if (postname === "Hill Station") {
+        return client.db('Tourism').collection('Hillstation') 
+    }
+    else {
+        return client.db('Tourism').collection('Gallery') 
+
+    }
+}
+
+
 async function loadPostsCollection(postname) {
     const client = await mongodb.MongoClient.connect
         ('mongodb+srv://rajaweather:rajaweather123@cluster0.fnqxb.mongodb.net/Weather?retryWrites=true&w=majority',
@@ -185,7 +272,7 @@ async function loadPostsCollection(postname) {
             }
         )
     if (postname === "Environmental Awarness") {
-        return client.db('Weather').collection('Environmental Awarness')
+        return client.db('Weather').collection('Environmental Awarness') 
     }
     else if(postname === "Forcast"){
         return client.db('Weather').collection('Forcast')
